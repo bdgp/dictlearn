@@ -1,0 +1,163 @@
+% The following matlab code produces dictionaries of different
+% sizes K. Multiple starting values are being considered in the
+% computation to study the stability of the algorithm. Results are
+% stored in .mat files.
+
+addpath('../spams-matlab/');
+addpath('../spams-matlab/build/');
+addpath('../../utilities/');
+
+if ~exist('Load')
+    % choose the size of the dictionary
+    % either 64 by 32 or 32 by 16
+    
+    resolution = '32by16';
+    if strmatch(resolution,'64by32')
+        load('../../data/data64by32.mat');
+        width = 64;
+        height = 32;
+    else
+        load('../../data/data32by16.mat');
+        width = 32;
+        height = 16;
+    end
+    
+    readTF = 0; % read the TF annotation data?
+    if readTF
+        load('../../data/annotDataFinal.mat');
+        tfNames = gsym;
+        tfInd = [];
+        for i = 1:length(tfNames)
+            indTemp = strmatch(tfNames(i),geneNames,'exact');
+            tfInd = [tfInd;indTemp];
+        end
+    end
+    ind = find(template(:,:,1)==1);
+    Y = zeros(height*width,size(X,2));
+    Y(ind,:) = X;
+    Load = 1;
+end
+
+[m,n] = size(X);
+
+% contaminate the image data with Gaussian of certain variance
+sigma = 0;
+rng('default');
+E = sigma*randn(m,n);
+X = X + E;
+
+% truncating...
+X(X<0)=0;
+X(X>1)=1;
+
+numPatterns = 1:2:100; % dictionary sizes
+randomStart = 1; % initialize dictionary learning by randomly
+                 % selecting K images from the data
+noiseStart = 0; % initialize dictionary learning from random noise image
+lambda = 0; % sparsity control for the coefficients alpha
+gamma1 = 0; % sparsity control on the dictionary patterns
+doShift = 0; % do we want to shift the images?
+
+for k = 1:length(numPatterns)
+    
+    K =numPatterns(k);
+    if doShift == 1
+        if randomStart == 1
+            D0 = dictLearnInit(X,K,'random',0);
+            path = ['./',resolution,'/Shift1randomStart','Sigma=',num2str(sigma),'/K=',num2str(K),'/'];
+        elseif noiseStart == 1
+            D0 = rand(size(X,1),K);
+            path = ['./',resolution,'/Shift1noiseStart','Sigma=',num2str(sigma),'/K=',num2str(K),'/'];
+        end
+    else
+        if randomStart == 1
+            D0 = dictLearnInit(X,K,'random',0);
+            path = ['./',resolution,'/randomStart','Sigma=',num2str(sigma),'/K=',num2str(K),'/'];
+        elseif noiseStart == 1
+            D0 = rand(size(X,1),K);
+            path = ['./',resolution,'/noiseStart','Sigma=',num2str(sigma),'/K=',num2str(K),'/'];
+        end
+    end
+    mkdir(path);
+    
+    
+    param.mode = 2; 
+    param.K=K;  % learns a dictionary with K elements
+    param.lambda=lambda; % penalizing parameter on alpha
+    param.numThreads=-1; % number of threads
+    param.batchsize=min(1024,n);
+    param.posD = true;   % positive dictionary
+    param.iter = 300;  % number of iteration 
+    param.modeD = 0;
+    param.verbose = 0; % print out update information?
+    param.pos = 1; % positive alpha
+    param.posAlpha = 1; % positive alpha
+    param.gamma1 = gamma1; % penalizing parameter on the dictionary patterns    
+    param.D = D0; % set initial values
+    
+        
+    Dtemplate = mexTrainDL(X,param); % learn a dictionary first to
+                                     % be used as template for alignment
+    
+    % for each fixed dictionary K, we will repeat dictionary
+    % learning for 100 times, each with a different initial value
+    R = zeros(1,100); % place holder for the 100 objective function values
+    for i = 1:100
+        if doShift
+            for ii = 1:size(X,2)
+                method = randsample(1:4,1);
+                pp.by = 1;
+                Ytemp = perturbImg(Y(:,ii),width,height,method,pp);
+                X(:,ii) = Ytemp(ind,:);
+            end
+        end
+
+        if randomStart == 1
+            D0 = dictLearnInit(X,K,'random',0);
+        elseif noiseStart == 1
+            D0 = rand(size(X,1),K);
+        end
+        
+        param.D = D0; 
+        tic
+        D = mexTrainDL(X,param); 
+        alpha = mexLasso(X,D,param);
+        toc
+        % objective function value:
+        R(i) = mean(0.5*sum((X-D*alpha).^2)+param.lambda*sum(abs(alpha)));
+        
+        
+        permInd = dictMatch(Dtemplate,D,'euclidean');
+        D = D(:,permInd); % permute the columns of D to match the
+                          % template Dtemplate.
+        
+        %%%% producing png file for the learned dictionary
+        Dtemp = zeros(width*height,K) + max(D(:))/4;      
+        Dstd = dictStd(D,2);
+        Dtemp(ind,:) = Dstd;
+            
+        imgMat = imageBatchProduce(Dtemp,width,height,floor(sqrt(K))+1,floor(sqrt(K))+1);
+        M = max(imgMat(:));
+        if M > 0
+            scale = 1;
+            imgMat(imgMat>=M/scale) = M/scale;
+            imgMat = imgMat/(M/scale);
+        end
+        imwrite(1-imgMat,[path,'rep',num2str(i),'_R',num2str(R(i)),'.jpg'],'jpg');
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        save([path,'rep',num2str(i),'Dict.mat'],'D');
+        if i >= 2
+            if R(i)< Rbest
+                Dbest = D;
+                Rbest = R(i);
+            end
+        else
+            Dbest = D;
+            Rbest = R(1);
+        end
+        
+        input('press enter to continue');
+    end
+    % save the best dictionary in terms of objective function value
+    save([path,'bestDict.mat'],'Dbest','R'); 
+end

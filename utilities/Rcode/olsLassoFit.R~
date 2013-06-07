@@ -1,0 +1,18 @@
+olsLassoFit <- function(X,D,alpha,intercept = TRUE){
+n = dim(X)[2];
+if (intercept){
+   alphaOLS = matrix(0,nrow = dim(alpha)[1]+1,ncol = alpha);
+}else{
+   alphaOLS = matrix(0,nrow = dim(alpha)[1],ncol = alpha);
+}		
+
+
+for (i in 1:n){
+    res = olsLassoFit0(X[,i],D,alpha[,i],intercept);
+    alphaOLS
+}
+
+
+
+
+}

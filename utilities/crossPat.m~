@@ -1,0 +1,6 @@
+function crossPat(width,height,crossW,crossH)
+Y = zeros(height,width);
+rowMidPt = floor(height/2);
+colMidPt = floor(width/2);
+rowInd = (rowMidPt-crossW):(rowMidPt + crossW);
+colInd = (colMidPt - crossH):(colMidPt+crossH);

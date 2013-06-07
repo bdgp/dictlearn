@@ -1,0 +1,10 @@
+imageStd <- function(X,method = 'max',lower = 0.5){
+# Standardization of expression images
+# X: data
+# method: 
+# 1) max: x/max(x);
+# 2) mean: (x-mean(x))_+;
+# 3) quantile: (x - quantile(x,lower))_+;
+# 4) L1: x/||x||_1;
+# 5) L2: x/||x||_2;
+

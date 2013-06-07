@@ -1,0 +1,115 @@
+addpath('~/matlab/packages/spams-matlab/');
+addpath('~/matlab/packages/spams-matlab/build/');
+addpath('~/fruitfly/image/image2TI');
+addpath('~/fruitfly/image/Visualization');
+addpath('~/fruitfly/image/EDA/explore');
+addpath('~/fruitfly/annotation/TF/som/somtoolbox/');
+addpath('~/topoDict/');
+addpath('~/fruitfly/image/osDict/utilities/');
+addpath('../');
+if ~exist('Load')
+    load('./32by16/data.mat');
+    ind = find(template(:,:,1)==1);
+    Load = 1;
+end
+width = 32; height = 16;
+numPatterns = [47,74];
+numReplicates = 100;
+initial_path = './32by16/randomStartParameters/';
+
+for k = 1:length(numPatterns)
+    K = numPatterns(k);
+    K = 50
+    current_path0 = [initial_path, 'K=', num2str(K),'/']; 
+    % initializing
+    load(['./32by16/randomStart/K=',num2str(K),'/bestDict.mat']);
+    Dtemplate = Dbest;
+    %D0 = Dbest;
+
+    for lambda = [0.01,0.05,0.1,0.2,0.3,0.5,0.8,1.0]
+        lambda = 0;
+      current_path1 = [current_path0, 'lambda=',num2str(lambda),'/']; 
+      
+      for gamma1 = [0.1,0.2,0.5,0.7,1,1.5,2,2.5,3]
+          gamma1 = 0;
+          R = zeros(numReplicates,1);
+          current_path2 = [current_path1, 'gamma1=', num2str(gamma1),'/']
+          mkdir(current_path2);
+
+      
+          [m,n] = size(X);
+          param.mode = 2;
+          param.modeD = 0;%should be 1 for lambda and gamma
+          param.K=K;  % learns a dictionary with K elements
+          param.lambda=lambda; % penalizing constant on alpha
+          param.numThreads=-1; % number of threads
+          param.batchsize=min(1024,n);
+          param.posD = true;   % positive dictionary
+          param.iter=300;  % number of iteration; default = 1000
+          
+          param.verbose = 1;
+          param.pos = 1; % positive alpha
+          param.posAlpha = 1;
+          param.gamma1 = gamma1; % penalizing constant on dict
+          param.ols = 0;
+      
+          for i = 1:numReplicates
+              D0 = dictLearnInit(X,K,'random',0);
+              param.D = D0; 
+     
+              %%%%%%%%%% EXPERIMENT %%%%%%%%%%%
+              %tic
+              Y = zeros(height,width);
+              rowInd = floor(height/2):floor(height/2)+3;
+              colInd = floor(width/2):floor(width/2)+3;
+              Y(rowInd,colInd) = 1;
+              Ytemp = Y(:);
+              
+              Xextra = repmat(Ytemp(ind),1,2);
+              
+              D = mexTrainDL([X,Xextra],param); 
+stop              
+              alpha = mexLasso(X,D,param);
+              %toc
+              %figure; hist(sum(abs(alpha)>1e-5),0:K);
+              
+              permInd = dictMatch(Dtemplate,D,'euclidean');
+              R(i) = mean(0.5*sum((X-D*alpha).^2)+param.lambda*sum(abs(alpha)));
+              
+              D = D(:,permInd);
+              Dtemp = zeros(width*height,K) + max(D(:))/4;      
+              Dstd = dictStd(D,2);
+              Dtemp(ind,:) = Dstd;
+              %imageBatchDisplay(Dtemp,width,height,floor(sqrt(K))+1,floor(sqrt(K))+1,'gray');
+      
+              imgMat = imageBatchProduce(Dtemp,width,height,floor(sqrt(K))+1,floor(sqrt(K))+1);
+              M = max(imgMat(:));
+              if M > 0
+                  scale = 1;
+                  imgMat(imgMat>=M/scale) = M/scale;
+                  imgMat = imgMat/(M/scale);
+              end
+              imwrite(1-imgMat,[current_path2,'rep',num2str(i),'_R',num2str(R(i)),'.jpg'],'jpg');
+      
+              if i >= 2
+                  if R(i)< Rbest
+                      Dbest = D;
+                      Rbest = R(i);
+                  end
+              else
+                  Dbest = D;
+                  Rbest = R(1);
+              end
+              param.D = [];
+              save([current_path2,'rep',num2str(i),'Dict.mat'],'D','param');
+              if max(D(:)) < 1e-8
+                  break;
+              end
+              
+              input('press enter to continue');
+          end
+          save([current_path2,'bestDict.mat'],'Dbest','R');
+      end
+   end
+end
+

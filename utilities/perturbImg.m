@@ -1,0 +1,46 @@
+function Xpert = perturbImg(X,width,height,method,param)
+[m,n] = size(X);
+Xpert = zeros(m,n);
+
+switch method
+  case 'noise'
+    E = param*randn(m,n);
+    Xpert = X + E;
+  case 'shift'
+    for i = 1:n
+        imgTemp = reshape(X(:,i),height,width);
+        imgTemp2 = zeros(height,width);
+        if strmatch(param.direction,'vertical')
+            vertMax = min(height + param.by,height);
+            vertMin = max(1+param.by,1);
+            start = max(1,1-param.by);
+            imgTemp2(start:(vertMax-vertMin+start),:) = imgTemp(vertMin:vertMax,:);
+        else
+            horiMax = min(width + param.by,width);
+            horiMin = max(1+param.by,1);
+            start = max(1,1-param.by);        
+            imgTemp2(:,start:(horiMax-horiMin+start)) = imgTemp(:,horiMin:horiMax);
+        end
+        Xpert(:,i) = imgTemp2(:);
+    end
+  case 1
+    method = 'shift';
+    param.direction = 'vertical';
+    param.by = param.by;
+    Xpert = perturbImg(X,width,height,method,param);
+  case 2
+    method = 'shift';
+    param.direction = 'vertical';
+    param.by = -param.by;
+    Xpert = perturbImg(X,width,height,method,param);
+  case 3
+    method = 'shift';
+    param.direction = 'horizontal';
+    param.by = param.by;
+    Xpert = perturbImg(X,width,height,method,param);
+  case 4
+    method = 'shift';
+    param.direction = 'horizontal';
+    param.by = -param.by;
+    Xpert = perturbImg(X,width,height,method,param);
+end

@@ -1,0 +1,7 @@
+function strVector = num2strBatch(numVector)
+n = length(numVector);
+strVector = cell(1,n);
+for i = 1:n
+    strVector{i} = num2str(numVector(i));
+end
+    

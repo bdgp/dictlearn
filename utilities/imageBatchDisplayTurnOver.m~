@@ -1,0 +1,6 @@
+function imageBatchDisplayTurnOver(D,width,height,nrow,ncol,imgNames)
+% D: a list of images
+% width/height: the width and height of an image
+% nrow/ncol: number of rows/cols of the layout
+% imgNames: the names of the images
+[p, n] =D;

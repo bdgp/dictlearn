@@ -1,0 +1,25 @@
+function [distM,rowTemp,colTemp] = amariError(A)
+% amari error
+% normalized to [0,1]
+
+[n,m] = size(A);
+if n == 1 & m == 1
+    distM = double(A==0);
+    rowTemp = 0;
+    cowTemp = 0;
+    return;
+end
+
+maxCol = max(abs(A),[],1);
+sumCol = sum(abs(A),1);
+colTemp = mean(abs(sumCol./maxCol - 1));
+naInd = find(isnan(colTemp)==1);
+colTemp(naInd) = n - 1;
+
+maxRow = max(abs(A),[],2);
+sumRow = sum(abs(A),2);
+rowTemp = mean(abs(sumRow./maxRow - 1));
+naInd = find(isnan(rowTemp)==1);
+rowTemp(naInd) = m - 1;
+
+distM = (rowTemp + colTemp)/(2*(m-1));

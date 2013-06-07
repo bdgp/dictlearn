@@ -1,0 +1,7 @@
+function [up,down] = cutImg(d,position,direction,cutWidth,width,height)
+I = reshape(d,height,width);
+mask = zeros(height,width);
+if strmatch(direction,'horizontal')
+    trans = 1:(-1/(2*cutWidth)):0;
+    trans = trans(1:2*cutWidth)';
+    lineMask1 = ones(position-cutWidth)

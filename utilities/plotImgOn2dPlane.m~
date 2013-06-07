@@ -1,0 +1,39 @@
+function [img,L] = plotImgOn2dPlane(l,X,width,height,scale1,scale2)
+%l: N by 2 matrix, (pos) integer-valued
+%X: N vectorized images;
+%width/height: original width/height of the images 
+%scale1: scale of the coord
+%scale2: scale of the image
+
+margin = 20;
+xMin = min(l(:,1));
+xMax = max(l(:,1));
+yMin = min(l(:,2));
+yMax = max(l(:,2));
+
+L = l; % new coordinate
+L(:,1) = (l(:,1)-xMin)*scale1+height*scale2 + margin;
+L(:,2) = (l(:,2)-yMin)*scale1+width*scale2 + margin;
+
+
+L = int16(L);
+
+img = zeros(max(L(:,2))+margin, max(L(:,1)+margin));
+imgTemp2 = imresize(reshape(X(:,1),height,width),scale2);
+[nrow,ncol] = size(imgTemp2);
+for i = 1:size(L,1)
+    imgTemp1 = reshape(X(:,i),height,width);
+    imgTemp2 = imresize(imgTemp1,scale2);
+    if mod(nrow,2) == 0
+        rowInd = (L(i,2)- nrow/2+1):(L(i,2)+nrow/2);
+    else
+        rowInd = (L(i,2)- floor(nrow/2)):(L(i,2)+floor(nrow/2));
+    end
+    rowInd = rowInd(end:-1:1);
+    if mod(ncol,2) == 0
+        colInd = (L(i,1)- ncol/2+1):(L(i,1)+ncol/2);
+    else
+        colInd = (L(i,1)- floor(ncol/2)):(L(i,1)+floor(ncol/2));
+    end
+    img(rowInd,colInd) = imgTemp2;
+end

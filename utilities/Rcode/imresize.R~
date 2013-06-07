@@ -1,0 +1,8 @@
+imresize <- function(Iold, ratio)
+nrow = dim(Iold)[1];
+ncol = dim(Iold)[2];
+
+step = 1/ratio;
+indRow = seq(from = 1, to = nrow, by = step);
+indCol = seq(from = 1, to = ncol, by = step);
+Inew = Iold[indRow,indCol];

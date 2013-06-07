@@ -1,0 +1,5 @@
+function outputChar = blankKill(inputChar)
+
+outputChar = inputChar;
+for i = 1:length(inputChar)
+    charTemp = inputChar{i};

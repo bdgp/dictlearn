@@ -1,0 +1,51 @@
+displayFit<-function(X,D,alpha,imgNames=NULL,dictNames = NULL, template,width = 32, height =16,scale =1, maxCovariates = 5, savePath = NULL, paintBackground = TRUE, bgLevel = max(X)/5,colorScale = 'blueRed'){
+ind = which(template[,,1]==1);
+Xhat = D%*%as.matrix(alpha);
+if (paintBackground){
+   X_rect = matrix(bgLevel,nrow = width*height, ncol = dim(X)[2]);
+   X_hat_rect = X_rect;
+   D_rect = matrix(bgLevel,nrow = width*height, ncol = dim(D)[2]);
+   Y = matrix(bgLevel,nrow = width*height,ncol = dim(X)[2]*(3+maxCovariates));
+}else{
+   X_rect = matrix(0,nrow = width*height, ncol = dim(X)[2]);
+   X_hat_rect = X_rect;	  
+   D_rect = matrix(0,nrow = width*height, ncol = dim(D)[2]);
+   Y = matrix(0,nrow = width*height,ncol = dim(X)[2]*(3+maxCovariates));
+}
+
+maxCovariates = min(maxCovariates,dim(D)[2]);
+
+X_rect[ind,] = X;
+X_hat_rect[ind,] = Xhat;
+D_rect[ind,] = D;
+
+imgNames2 = rep(' ',dim(X)[2]*(3+maxCovariates));
+
+k = 1;
+for (i in 1:dim(X)[2]){
+    imgNames2[k] = imgNames[i];
+    Y[,k] = X_rect[,i]; k = k+1;# the original image
+    Y[,k] = X_hat_rect[,i]; k = k + 1; # the fitted image
+    Y[ind,k] = (X[,i]-Xhat[,i]); k = k + 1; # the res
+    alphaTemp = alpha[,i];
+    # order the covariates according to their magnitudes.
+    decreasingInd = sort(abs(alphaTemp),decreasing = TRUE,index.return=TRUE)$ix;
+    #increasingInd = rk[rk];
+    #decreasingInd = increasingInd[length(increasingInd):1];
+    for (j in 1:maxCovariates){
+    	p = decreasingInd[j];
+
+	if (abs(alphaTemp[p])>1e-6){
+	   if (!is.null(dictNames)){
+	      imgNames2[k] = paste(dictNames[p],': ',signif(alphaTemp[p],2),sep='');}else{
+	      imgNames2[k] = paste('p',p,': ',signif(alphaTemp[p],2),sep='');
+	      }
+	   Y[ind,k] = D[,p]*alphaTemp[p];
+	 }
+	k = k+1;
+    }	
+}      
+
+imageBatchDisplay(Y,width,height,nrow=dim(X)[2],ncol=(3+maxCovariates),colorScale = colorScale,imgNames = imgNames2, savePath = savePath,noNumber= TRUE);
+
+}
