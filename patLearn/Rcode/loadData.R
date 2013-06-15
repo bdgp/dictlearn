@@ -6,12 +6,12 @@ if (!exists('Load')){
 
 if (!exists('readData')){
    # load the matlab file that contains the gene names for the images
-   path0 = "/users/siqi/fruitfly/image/osDict/principalPatternPaper/dictLearn/bestDict/";
-   dataFile0 = readMat(paste(path0,'geneNames.mat',sep = ''));
+   path0 = "../../data/geneNames.mat";
+   dataFile0 = readMat(path0);
    geneNames = as.vector(unlist(dataFile0$geneName));
 
    # load the image data 32 by 16 with template.
-   dataPath = paste(path0,'32by16/data.mat',sep = '');
+   dataPath = "../../data/data32by16.mat";
    dataFile = readMat(dataPath);
    template = dataFile$template;
    
@@ -22,7 +22,7 @@ if (!exists('readData')){
    ind = which(template[,,1]==1);
    
    # Now load the TF annotation data.
-   dataFile2 = readMat('~/fruitfly/annotation/TF/annotDataFinal.mat');
+   dataFile2 = readMat('../../data/annotDataFinal.mat');
    tfNames = as.vector(unlist(dataFile2$gsym));
    tfExp = dataFile2$gmat;
    tfDom = dataFile2$gdom;
